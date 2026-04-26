@@ -44,12 +44,12 @@ export type MoveClassification =
 export interface GameSummary {
   accuracy_white: number;
   accuracy_black: number;
-  blunders_white: number;   mistakes_white: number;   inaccuracies_white: number;
-  blunders_black: number;   mistakes_black: number;   inaccuracies_black: number;
-  good_white: number;       excellent_white: number;  great_white: number;
-  brilliant_white: number;  book_white: number;
-  good_black: number;       excellent_black: number;  great_black: number;
-  brilliant_black: number;  book_black: number;
+  blunders_white: number; mistakes_white: number; inaccuracies_white: number;
+  blunders_black: number; mistakes_black: number; inaccuracies_black: number;
+  good_white: number; excellent_white: number; great_white: number;
+  brilliant_white: number; book_white: number;
+  good_black: number; excellent_black: number; great_black: number;
+  brilliant_black: number; book_black: number;
   best_streak_white: number; best_streak_black: number;
   total_moves: number; result: string; opening_name: string;
 }
@@ -67,19 +67,35 @@ export interface HistoryGame {
 // ── Classification metadata ────────────────────────────────────────────────────
 
 export const CLASSIFICATION_META: Record<MoveClassification, { color: string; icon: string; label: string }> = {
-  Book:       { color: "#9B7DE8", icon: "📖", label: "Book" },
-  Brilliant:  { color: "#1BAAFF", icon: "✨", label: "Brilliant" },
-  Great:      { color: "#22C55E", icon: "!!", label: "Great" },
-  Excellent:  { color: "#4ADE80", icon: "!",  label: "Excellent" },
-  Good:       { color: "#86EFAC", icon: "⊕",  label: "Good" },
-  Inaccuracy: { color: "#FACC15", icon: "?!",  label: "Inaccuracy" },
-  Mistake:    { color: "#F97316", icon: "?",   label: "Mistake" },
-  Blunder:    { color: "#EF4444", icon: "??",  label: "Blunder" },
+  Book: { color: "#9B7DE8", icon: "📖", label: "Book" },
+  Brilliant: { color: "#1BAAFF", icon: "✨", label: "Brilliant" },
+  Great: { color: "#22C55E", icon: "!!", label: "Great" },
+  Excellent: { color: "#4ADE80", icon: "!", label: "Excellent" },
+  Good: { color: "#86EFAC", icon: "⊕", label: "Good" },
+  Inaccuracy: { color: "#FACC15", icon: "?!", label: "Inaccuracy" },
+  Mistake: { color: "#F97316", icon: "?", label: "Mistake" },
+  Blunder: { color: "#EF4444", icon: "??", label: "Blunder" },
 };
+
+// ── API envelope ───────────────────────────────────────────────────────────────
+
+interface ApiEnvelope<T> {
+  success: boolean;
+  data: T | null;
+  error: string | null;
+}
+
+function unwrap<T>(envelope: ApiEnvelope<T>): T {
+  if (!envelope.success || envelope.data == null) {
+    throw new Error(envelope.error ?? "Unknown backend error");
+  }
+  return envelope.data;
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function handleError(error: unknown): never {
+
   const axiosError = error as AxiosError<{ detail: string }>;
   const detail = axiosError.response?.data?.detail || axiosError.message || "Unknown error";
   throw new Error(detail);
@@ -89,8 +105,8 @@ function handleError(error: unknown): never {
 
 export async function analyzePosition(fen: string, depth = 15): Promise<AnalyzeResponse> {
   try {
-    const res = await api.post<AnalyzeResponse>("/analyze", { fen, depth });
-    return res.data;
+    const res = await api.post<ApiEnvelope<AnalyzeResponse>>("/analyze", { fen, depth });
+    return unwrap(res.data);
   } catch (e) { handleError(e); }
 }
 
@@ -101,6 +117,21 @@ export async function checkHealth(): Promise<boolean> {
 
 // ── New API calls ──────────────────────────────────────────────────────────────
 
+interface RawMoveAnalysis {
+  played_move: string;
+  played_move_san: string;
+  best_move: string;
+  best_move_san: string;
+  classification: MoveClassification;
+  eval_before: number;
+  eval_after: number;
+  centipawn_loss: number | null;
+  pv_line: string[];
+  insight: string;
+  is_book: boolean;
+  is_brilliant: boolean;
+}
+
 export async function analyzeMoveContext(
   fen_before: string,
   move_uci: string,
@@ -109,8 +140,26 @@ export async function analyzeMoveContext(
   skillLevel = 20
 ): Promise<MoveAnalysis> {
   try {
-    const res = await api.post<MoveAnalysis>("/analyze-move", { fen_before, move_uci, ply, depth, skill_level: skillLevel });
-    return res.data;
+    const res = await api.post<ApiEnvelope<RawMoveAnalysis>>("/analyze-move", { fen_before, move_uci, ply, depth, skill_level: skillLevel });
+    const d = unwrap(res.data);
+    // Remap new envelope field names back to MoveAnalysis shape
+    return {
+      move_uci: d.played_move,
+      move_san: d.played_move_san,
+      ply: ply,
+      classification: d.classification,
+      eval_before: d.eval_before,
+      eval_after: d.eval_after,
+      mate_before: null, // Backend doesn't split mate_before/after anymore, eval includes it as high values
+      mate_after: null,
+      centipawn_loss: d.centipawn_loss ?? 0,
+      best_move_uci: d.best_move,
+      best_move_san: d.best_move_san,
+      pv_line: d.pv_line ?? [],
+      insight: d.insight ?? "",
+      is_book: d.is_book ?? false,
+      is_brilliant: d.is_brilliant ?? false,
+    };
   } catch (e) { handleError(e); }
 }
 
@@ -146,8 +195,8 @@ export async function validateChallenge(
   fen: string, move: string, difficulty: string, attempts: number
 ): Promise<ChallengeValidation> {
   try {
-    const res = await api.post<ChallengeValidation>("/challenge/validate", { fen, move, difficulty, attempts });
-    return res.data;
+    const res = await api.post<ApiEnvelope<ChallengeValidation>>("/challenge/validate", { fen, move, difficulty, attempts });
+    return unwrap(res.data);
   } catch (e) { handleError(e); }
 }
 
@@ -160,9 +209,8 @@ export async function getChallengeHint(puzzle_id: string, current_level: number)
 
 export async function analyzeGame(pgn: string, depth = 14): Promise<GameAnalysisResponse> {
   try {
-    // Full-game analysis is slow (depth * 2 Stockfish calls per move). Give it 10 min.
-    const res = await api.post<GameAnalysisResponse>("/analyze-game", { pgn, depth }, { timeout: 600_000 });
-    return res.data;
+    const res = await api.post<ApiEnvelope<GameAnalysisResponse>>("/analyze-game", { pgn, depth }, { timeout: 600_000 });
+    return unwrap(res.data);
   } catch (e) { handleError(e); }
 }
 

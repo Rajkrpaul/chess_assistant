@@ -85,7 +85,13 @@ async function fetchFromBackend(
       throw new Error(`Backend HTTP ${res.status}: ${errText}`);
     }
 
-    const data = await res.json();
+    const json = await res.json();
+
+    // Unwrap standardised envelope { success, data, error }
+    if (json.success === false) {
+      throw new Error(json.error ?? "Backend error");
+    }
+    const data = json.data ?? json; // fallback for non-wrapped responses
 
     // Parse evaluation string → centipawns or mate number
     let cp: number | null = null;

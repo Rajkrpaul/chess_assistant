@@ -27,7 +27,7 @@ interface SettingsContextValue {
 
 const SettingsContext = createContext<SettingsContextValue>({
   settings: defaultSettings,
-  updateSetting: () => {},
+  updateSetting: () => { },
 });
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
