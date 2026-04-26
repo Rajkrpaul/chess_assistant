@@ -168,15 +168,15 @@ class AIService:
     def __init__(self):
         DEFAULT_PATH = "./stockfish"
 
-raw = os.getenv("STOCKFISH_PATH", DEFAULT_PATH)
-cleaned = _clean_path(raw)
+        raw = os.getenv("STOCKFISH_PATH", DEFAULT_PATH)
+        cleaned = _clean_path(raw)
 
-# fallback if env empty or invalid
-if not cleaned or not os.path.isfile(cleaned):
-    cleaned = DEFAULT_PATH
+        # fallback if env empty or invalid
+        if not cleaned or not os.path.isfile(cleaned):
+            cleaned = DEFAULT_PATH
 
-self.stockfish_path = cleaned
-logger.info(f"Using Stockfish path: {self.stockfish_path}")
+        self.stockfish_path = cleaned
+        logger.info(f"Using Stockfish path: {self.stockfish_path}")
         self._engine_ok: bool = False
         self.model: str = "stockfish"
         self._sf: Optional[_StockfishProcess] = None
