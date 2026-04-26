@@ -36,12 +36,11 @@ class TopMove(BaseModel):
 
 
 class AnalyzeResponse(BaseModel):
-    best_move: str = Field(..., description="Best move in UCI notation (e.g., e2e4)")
-    evaluation: str = Field(..., description="Position evaluation (e.g., +1.2, -0.5, #3)")
-    explanation: str = Field(..., description="Human-readable explanation of the best move")
+    best_move: str = Field(default="", description="Best move in UCI notation (e.g., e2e4)")
+    evaluation: str = Field(default="0.00", description="Position evaluation (e.g., +1.2, -0.5, #3)")
+    explanation: str = Field(default="", description="Human-readable explanation of the best move")
     top_moves: List[TopMove] = Field(default=[], description="Top candidate moves with evaluations")
     mate_in: Optional[int] = Field(None, description="Moves until checkmate (if applicable)")
-
 
 # ── Move-level analysis models ─────────────────────────────────────────────────
 
@@ -132,3 +131,18 @@ class SaveGameRequest(BaseModel):
 
 class HistoryListResponse(BaseModel):
     games: List[HistoryGame]
+
+    # ── Standardised API envelope ──────────────────────────────────────────────────
+
+class ApiResponse(BaseModel):
+    success: bool = True
+    data: Any = None
+    error: Optional[str] = None
+
+    @classmethod
+    def ok(cls, data: Any) -> "ApiResponse":
+        return cls(success=True, data=data, error=None)
+
+    @classmethod
+    def fail(cls, error: str) -> "ApiResponse":
+        return cls(success=False, data=None, error=error)

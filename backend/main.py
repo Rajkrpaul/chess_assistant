@@ -12,6 +12,7 @@ from models import (
     AnalyzeMoveRequest, MoveAnalysis,
     GameAnalysisRequest, GameAnalysisResponse,
     SaveGameRequest, HistoryGame, HistoryListResponse,
+    ApiResponse,
 )
 from ai_service import AIService
 from game_store import GameStore
@@ -63,7 +64,7 @@ async def health_check():
 
 # ── Single-position analysis (existing) ──────────────────────────────────────
 
-@app.post("/analyze", response_model=AnalyzeResponse)
+@app.post("/analyze", response_model=ApiResponse)
 async def analyze_position(request: AnalyzeRequest):
     logger.info(f"Analyzing FEN: {request.fen}")
     try:
@@ -71,32 +72,32 @@ async def analyze_position(request: AnalyzeRequest):
         if not board.is_valid():
             raise ValueError("Invalid board state")
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid FEN string provided.")
+        return ApiResponse.fail("Invalid FEN string provided.")
 
     if board.is_game_over():
-        raise HTTPException(status_code=422, detail="The game is already over in this position.")
+        return ApiResponse.fail("The game is already over in this position.")
 
     if not list(board.legal_moves):
-        raise HTTPException(status_code=422, detail="No legal moves available from this position.")
+        return ApiResponse.fail("No legal moves available from this position.")
 
     try:
         result = await ai_svc.analyze_position(request.fen, depth=request.depth, skill_level=request.skill_level)
     except Exception as e:
         logger.error(f"Analysis error: {e}")
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        return ApiResponse.fail(f"Analysis failed: {str(e)}")
 
-    return AnalyzeResponse(
-        best_move=result["best_move"],
-        evaluation=result["evaluation"],
-        explanation=result["explanation"],
-        top_moves=result.get("top_moves", []),
-        mate_in=result.get("mate_in"),
-    )
+    return ApiResponse.ok({
+        "best_move": result.get("best_move", ""),
+        "evaluation": result.get("evaluation", "0.00"),
+        "explanation": result.get("explanation", ""),
+        "top_moves": result.get("top_moves", []),
+        "mate_in": result.get("mate_in"),
+    })
 
 
 # ── Per-move classification ───────────────────────────────────────────────────
 
-@app.post("/analyze-move", response_model=MoveAnalysis)
+@app.post("/analyze-move", response_model=ApiResponse)
 async def analyze_move(request: AnalyzeMoveRequest):
     try:
         board = chess.Board(request.fen_before)
@@ -104,7 +105,7 @@ async def analyze_move(request: AnalyzeMoveRequest):
         if move not in board.legal_moves:
             raise ValueError("Illegal move")
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Invalid input: {exc}")
+        return ApiResponse.fail(f"Invalid input: {exc}")
 
     try:
         result = await ai_svc.analyze_move(
@@ -116,9 +117,22 @@ async def analyze_move(request: AnalyzeMoveRequest):
         )
     except Exception as e:
         logger.error(f"Move analysis error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return ApiResponse.fail(str(e))
 
-    return result
+    return ApiResponse.ok({
+        "played_move": result.move_uci,
+        "played_move_san": result.move_san,
+        "best_move": result.best_move_uci,
+        "best_move_san": result.best_move_san,
+        "classification": result.classification,
+        "eval_before": result.eval_before if result.eval_before is not None else 0.0,
+        "eval_after": result.eval_after if result.eval_after is not None else 0.0,
+        "centipawn_loss": result.centipawn_loss,
+        "pv_line": result.pv_line or [],
+        "insight": result.insight or "",
+        "is_book": result.is_book,
+        "is_brilliant": result.is_brilliant,
+    })
 
 
 # ── Full-game analysis ────────────────────────────────────────────────────────
@@ -203,7 +217,7 @@ class ChallengeValidateResponse(BaseModel):
     line: list[str]
     attempts: int
 
-@app.post("/challenge/validate", response_model=ChallengeValidateResponse)
+@app.post("/challenge/validate", response_model=ApiResponse)
 async def validate_challenge(req: ChallengeValidateRequest):
     # Analyze the move using ai_svc
     # Since it's a puzzle, we'll use a slightly lower depth for speed if needed, but 14 is fine.
@@ -239,19 +253,19 @@ async def validate_challenge(req: ChallengeValidateRequest):
         elif correct:
             message = "Brilliant! You found a strong tactical idea."
             
-        return ChallengeValidateResponse(
-            correct=correct,
-            best_move=analysis.best_move_uci,
-            user_eval=user_eval,
-            best_eval=best_eval,
-            classification=analysis.classification,
-            message=message,
-            line=analysis.pv_line,
-            attempts=req.attempts
-        )
+        return ApiResponse.ok({
+            "correct": correct,
+            "best_move": analysis.best_move_uci,
+            "user_eval": user_eval,
+            "best_eval": best_eval,
+            "classification": analysis.classification,
+            "message": message,
+            "line": analysis.pv_line or [],
+            "attempts": req.attempts,
+        })
     except Exception as e:
         logger.error(f"Challenge validation error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return ApiResponse.fail(str(e))
 
 class ChallengeHintRequest(BaseModel):
     puzzle_id: str
