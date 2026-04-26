@@ -8,13 +8,14 @@ import os
 import sys
 import shutil
 from dotenv import load_dotenv
-STOCKFISH_PATH = "./stockfish"
 
 load_dotenv(".env")
 load_dotenv(".env.local", override=True)
 
-raw = os.getenv("STOCKFISH_PATH", "")
-cleaned = raw.strip().strip('"').strip("'")
+DEFAULT_PATH = "./stockfish"
+
+raw = os.getenv("STOCKFISH_PATH", DEFAULT_PATH)
+cleaned = raw.strip().strip('"').strip("'") or DEFAULT_PATH
 
 print(f"\n{'='*60}")
 print(f"STOCKFISH_PATH raw value : {repr(raw)}")
@@ -55,8 +56,9 @@ else:
 print(f"\nTesting if it can actually launch...")
 try:
     import chess.engine
-    engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
+    engine = chess.engine.SimpleEngine.popen_uci(cleaned)
     print(f"✅ Stockfish launched successfully!")
+    print(f"🚀 Using engine path: {cleaned}")
     print(f"   Engine id: {engine.id}")
     engine.quit()
 except Exception as e:
