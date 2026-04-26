@@ -127,16 +127,19 @@ async def analyze_move(request: AnalyzeMoveRequest):
 
 # ── Full-game analysis ────────────────────────────────────────────────────────
 
-@app.post("/analyze-game", response_model=GameAnalysisResponse)
+@app.post("/analyze-game", response_model=ApiResponse)
 async def analyze_game(request: GameAnalysisRequest):
     if not request.pgn.strip():
-        raise HTTPException(status_code=400, detail="PGN cannot be empty.")
+        return ApiResponse.fail("PGN cannot be empty.")
     try:
         analyses, summary = await ai_svc.analyze_game(request.pgn, depth=request.depth)
-        return GameAnalysisResponse(moves=analyses, summary=summary)
+        return ApiResponse.ok({
+            "moves": [m.model_dump() for m in analyses],
+            "summary": summary.model_dump(),
+        })
     except Exception as e:
         logger.error(f"Game analysis error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return ApiResponse.fail(str(e))
 
 
 # ── History ───────────────────────────────────────────────────────────────────
