@@ -166,7 +166,7 @@ class AIService:
     """
 
     def __init__(self):
-        DEFAULT_PATH = "./stockfish"
+        DEFAULT_PATH = "../stockfish"
 
         raw = os.getenv("STOCKFISH_PATH", DEFAULT_PATH)
         cleaned = _clean_path(raw)
