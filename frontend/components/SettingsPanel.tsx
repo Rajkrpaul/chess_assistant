@@ -85,8 +85,10 @@ export default function SettingsPanel() {
             </div>
           </div>
           <button
+            type="button"
             onClick={() => updateSetting("showHints", !settings.showHints)}
             aria-label={settings.showHints ? "Disable hints" : "Enable hints"}
+            aria-pressed={settings.showHints}
             style={{
               flexShrink: 0,
               marginLeft: "16px",
@@ -98,9 +100,11 @@ export default function SettingsPanel() {
               position: "relative",
               cursor: "pointer",
               transition: "background 0.25s ease",
+              padding: 0,
             }}
           >
             <span style={{
+              display: "block",
               position: "absolute",
               top: "3px",
               left: settings.showHints ? "23px" : "3px",

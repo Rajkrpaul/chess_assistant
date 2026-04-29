@@ -19,6 +19,7 @@ import HistoryPanel from "./HistoryPanel";
 import SettingsPanel from "./SettingsPanel";
 import SavedPositionsPanel, { SavedPosition } from "./SavedPositionsPanel";
 import ChallengeMode from "./ChallengeMode";
+import CoachPanel from "./CoachPanel";
 import { useTheme, THEMES, Theme } from "../context/ThemeContext";
 import { useSettings } from "../context/SettingsContext";
 import {
@@ -136,7 +137,7 @@ export default function ChessAssistant() {
   const [arrowKey, setArrowKey] = useState(0);
 
   const [mode, setMode] = useState<GameMode>("analysis");
-  const [activeTab, setActiveTab] = useState<"Analysis" | "Play vs Computer" | "History" | "Saved Positions" | "Settings">("Analysis");
+  const [activeTab, setActiveTab] = useState<"Coach" | "Analysis" | "Play vs Computer" | "History" | "Saved Positions" | "Settings">("Coach");
   const [playerColor, setPlayerColor] = useState<PlayerColor>("white");
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [autoAnalysis, setAutoAnalysis] = useState<boolean>(() => {
@@ -552,28 +553,20 @@ export default function ChessAssistant() {
     <div style={{ height: "100vh", overflow: "hidden", display: "flex", background: config.background, transition: "background 0.4s ease", color: config.textPrimary, fontFamily: "'DM Sans', sans-serif", position: "relative" }}>
       {/* Global Background Image */}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundImage: "url(/global-bg.png)", backgroundSize: "cover", backgroundPosition: "center", opacity: isLightMode ? 0.4 : 0.4, filter: isLightMode ? "invert(1) grayscale(100%) contrast(1.2)" : "none", mixBlendMode: isLightMode ? "multiply" : "screen", pointerEvents: "none", zIndex: 0 }} />
-      {/* Left Sidebar */}
-      <div style={{ width: "240px", borderRight: `1px solid ${config.glassBorder}`, display: "flex", flexDirection: "column", padding: "16px 0", background: config.glassBg, backdropFilter: "blur(12px)", zIndex: 10 }}>
-        <div style={{ padding: "0 16px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-          <div style={{ fontSize: "1.8rem", filter: "drop-shadow(0 0 8px rgba(212,175,55,0.4))" }}>♔</div>
-          <div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, margin: 0, background: `linear-gradient(90deg, ${config.accentSecondary}, ${config.accentPrimary})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              Chess Strategy
-            </h1>
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "0.95rem", fontWeight: 700, margin: 0, color: config.accentPrimary }}>
-              Assistant
-            </h2>
-          </div>
-        </div>
+      
+      {/* Thin Navigation Bar */}
+      <div style={{ width: "80px", borderRight: `1px solid ${config.glassBorder}`, display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 0", background: config.glassBg, backdropFilter: "blur(12px)", zIndex: 11 }}>
+        <div style={{ fontSize: "1.8rem", filter: "drop-shadow(0 0 8px rgba(212,175,55,0.4))", marginBottom: "20px" }}>♔</div>
 
-        <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
+        <nav style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%", padding: "0 8px" }}>
           {[
-            { id: "Analysis", icon: "📊" },
-            { id: "Play vs Computer", icon: "🎮" },
-            { id: "History", icon: "🕐" },
-            { id: "Saved Positions", icon: "🔖" },
-            { id: "Challenges", icon: "⚔️" },
-            { id: "Settings", icon: "⚙️" },
+            { id: "Coach", icon: "♚", label: "Coach" },
+            { id: "Analysis", icon: "📊", label: "Analysis" },
+            { id: "Play vs Computer", icon: "🎮", label: "Play vs AI" },
+            { id: "History", icon: "🕐", label: "History" },
+            { id: "Saved Positions", icon: "🔖", label: "Saved" },
+            { id: "Challenges", icon: "⚔️", label: "Challenges" },
+            { id: "Settings", icon: "⚙️", label: "Settings" },
           ].map((item) => {
             const isActive = activeTab === item.id;
             return (
@@ -583,25 +576,22 @@ export default function ChessAssistant() {
                   if (item.id === "Challenges") {
                     router.push("/challenges");
                   } else {
-                    // ── FIX: switching to Settings/History/etc. while in play mode
-                    // just changes the visible tab — does NOT call startPlayMode again
                     setActiveTab(item.id as any);
                     if (item.id === "Analysis") setMode("analysis");
                     else if (item.id === "Play vs Computer") startPlayMode();
                     else if (item.id === "History") setShowHistory(true);
-                    // Settings, Saved Positions: just show that tab, game state untouched
                   }
                 }}
                 style={{
-                  display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "8px",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", padding: "8px 4px", borderRadius: "8px",
                   background: isActive ? `${config.accentPrimary}22` : "transparent",
                   border: `1px solid ${isActive ? `${config.accentPrimary}44` : "transparent"}`,
                   color: isActive ? config.accentPrimary : config.textSecondary,
-                  fontSize: "0.85rem", fontWeight: isActive ? 600 : 400, cursor: "pointer", transition: "all 0.2s ease", textAlign: "left"
+                  fontSize: "0.65rem", fontWeight: isActive ? 600 : 400, cursor: "pointer", transition: "all 0.2s ease"
                 }}
               >
-                <span style={{ fontSize: "1rem", opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
-                {item.id}
+                <span style={{ fontSize: "1.2rem", opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
+                {item.label}
               </button>
             );
           })}
@@ -610,23 +600,22 @@ export default function ChessAssistant() {
         <div style={{ flex: 1 }} />
 
         {/* Dark / Light Toggle */}
-        <div style={{ padding: "0 16px", marginTop: "16px" }}>
-          <div style={{ display: "flex", background: `${config.textSecondary}15`, borderRadius: "20px", padding: "4px" }}>
-             <button
-                onClick={() => isLightMode && toggleLightMode()}
-                style={{ flex: 1, padding: "6px 0", borderRadius: "16px", border: "none", background: !isLightMode ? `${config.accentPrimary}22` : "transparent", color: !isLightMode ? config.accentPrimary : config.textSecondary, fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-             >
-                <span>🌙</span> Dark
-             </button>
-             <button
-                onClick={() => !isLightMode && toggleLightMode()}
-                style={{ flex: 1, padding: "6px 0", borderRadius: "16px", border: "none", background: isLightMode ? `${config.accentPrimary}22` : "transparent", color: isLightMode ? config.accentPrimary : config.textSecondary, fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-             >
-                <span>☀️</span> Light
-             </button>
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "0 8px", marginTop: "16px", width: "100%" }}>
+           <button
+              onClick={toggleLightMode}
+              style={{ width: "100%", padding: "8px 0", borderRadius: "8px", border: "none", background: `${config.textSecondary}15`, color: config.textSecondary, fontSize: "1rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+           >
+              {isLightMode ? "☀️" : "🌙"}
+           </button>
         </div>
       </div>
+
+      {/* Secondary Left Sidebar (Coach Panel) */}
+      {activeTab === "Coach" && (
+        <div style={{ width: "300px", borderRight: `1px solid ${config.glassBorder}`, display: "flex", flexDirection: "column", background: config.glassBg, backdropFilter: "blur(12px)", zIndex: 10 }}>
+          <CoachPanel />
+        </div>
+      )}
 
       {activeTab === "Settings" ? (
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 32px", position: "relative", zIndex: 1 }}>
@@ -758,7 +747,16 @@ export default function ChessAssistant() {
                   ↺ Reset
                 </button>
                 <button onClick={() => {
-                   if (mode === "play") setPlayerColor(c => c === "white" ? "black" : "white");
+                   if (mode === "play") {
+                     setPlayerColor(c => {
+                       const newColor = c === "white" ? "black" : "white";
+                       const isAiTurn = (newColor === "white" && game.turn() === "b") || (newColor === "black" && game.turn() === "w");
+                       if (isAiTurn && !game.isGameOver()) {
+                         setTimeout(() => makeAiMove(game), 400);
+                       }
+                       return newColor;
+                     });
+                   }
                 }} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${config.glassBorder}`, background: "transparent", color: config.textSecondary, fontSize: "0.85rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
                   ⇅ Flip Board
                 </button>

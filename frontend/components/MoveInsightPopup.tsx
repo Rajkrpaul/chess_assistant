@@ -65,78 +65,77 @@ export default function MoveInsightPopup({ move, anchorRect, onClose }: Props) {
         style={{
           position: "fixed",
           left, top,
-          width: popupW,
+          width: popupW + 40,
           zIndex: 1999,
           background: config.glassBg || "rgba(18,18,28,0.97)",
           backdropFilter: "blur(20px)",
           border: `1px solid ${meta.color}55`,
           borderRadius: "12px",
-          padding: "14px 16px",
           boxShadow: `0 12px 40px rgba(0,0,0,0.7), 0 0 0 1px ${meta.color}22`,
           fontFamily: "'DM Sans', sans-serif",
           animation: "popIn 0.15s ease",
           pointerEvents: "auto",
+          overflow: "hidden"
         }}
       >
-        {/* Header row */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-          <span style={{
-            fontSize: "0.95rem", fontWeight: 700, color: meta.color,
-            background: `${meta.color}20`, padding: "2px 9px",
-            borderRadius: "6px", border: `1px solid ${meta.color}40`,
-            letterSpacing: "0.02em",
-          }}>
-            {move.move_san}
-          </span>
-          <span style={{ fontSize: "0.68rem", color: meta.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            {meta.icon} {meta.label}
-          </span>
-          <button
-            onClick={onClose}
-            style={{ marginLeft: "auto", background: "transparent", border: "none", color: config.textSecondary, cursor: "pointer", fontSize: "0.85rem", lineHeight: 1, padding: 0 }}
-          >✕</button>
-        </div>
-
-        {/* Eval delta row */}
-        <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
-          {[
-            { label: "Before", val: formatEval(move.eval_before, move.mate_before) },
-            { label: "After",  val: formatEval(move.eval_after,  move.mate_after) },
-            { label: "Loss",   val: move.centipawn_loss === 0 ? "0 cp" : `-${move.centipawn_loss} cp` },
-          ].map(({ label, val }) => (
-            <div key={label} style={{ flex: 1, textAlign: "center", background: "rgba(255,255,255,0.04)", borderRadius: "6px", padding: "5px 4px" }}>
-              <div style={{ fontSize: "0.55rem", color: config.textSecondary, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "2px" }}>{label}</div>
-              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: label === "Loss" && move.centipawn_loss > 0 ? meta.color : config.textPrimary }}>
-                {val}
-              </div>
+        <div style={{ display: "flex", alignItems: "flex-start", padding: "14px 16px" }}>
+          {/* Kasparov image for blunders/brilliant/mistakes */}
+          {(move.classification === "Blunder" || move.classification === "Mistake" || move.classification === "Brilliant") && (
+            <div style={{ marginRight: "12px", flexShrink: 0 }}>
+              <img 
+                src="/kasparov_coach.png" 
+                alt="Kasparov" 
+                style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  border: `2px solid ${meta.color}`,
+                  boxShadow: `0 0 10px ${meta.color}44`
+                }} 
+              />
             </div>
-          ))}
-        </div>
-
-        {/* Best move line (if different) */}
-        {move.best_move_san && move.best_move_san !== move.move_san && (
-          <div style={{
-            background: "rgba(255,255,255,0.04)", borderRadius: "7px",
-            padding: "6px 10px", marginBottom: "8px",
-            border: `1px solid rgba(255,255,255,0.07)`,
-          }}>
-            <span style={{ fontSize: "0.6rem", color: config.textSecondary }}>Best was </span>
-            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#4ADE80" }}>{move.best_move_san}</span>
-            {move.pv_line && move.pv_line.length > 0 && (
-              <span style={{ fontSize: "0.68rem", color: config.textSecondary }}>
-                {" · "}{move.pv_line.slice(0, 3).join(" ")}
-                {move.pv_line.length > 3 ? "…" : ""}
+          )}
+          
+          <div style={{ flex: 1 }}>
+            {/* Header row */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+              <span style={{ fontSize: "0.85rem", color: meta.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <span style={{ 
+                  background: meta.color, color: "#000", width: "18px", height: "18px", 
+                  borderRadius: "50%", display: "inline-flex", alignItems: "center", 
+                  justifyContent: "center", fontSize: "0.6rem", marginRight: "4px" 
+                }}>
+                  {meta.icon}
+                </span>
+                {meta.label}
               </span>
-            )}
-          </div>
-        )}
+              <button
+                onClick={onClose}
+                style={{ marginLeft: "auto", background: "transparent", border: "none", color: config.textSecondary, cursor: "pointer", fontSize: "0.85rem", lineHeight: 1, padding: 0 }}
+              >✕</button>
+            </div>
+            
+            <p style={{ fontSize: "0.8rem", color: config.textPrimary, margin: "0 0 8px 0" }}>
+              {move.insight || (move.classification === "Blunder" ? "That move loses a significant advantage." : move.classification === "Mistake" ? "That move loses a pawn." : "Excellent move!")}
+            </p>
 
-        {/* Insight text */}
-        {move.insight && (
-          <p style={{ fontSize: "0.72rem", color: config.textSecondary, lineHeight: 1.55, margin: 0 }}>
-            {move.insight}
-          </p>
-        )}
+            {/* Action buttons */}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px" }}>
+              <button onClick={onClose} style={{
+                background: "transparent",
+                border: `1px solid ${meta.color}55`,
+                color: meta.color,
+                padding: "6px 12px",
+                borderRadius: "6px",
+                fontSize: "0.75rem",
+                cursor: "pointer"
+              }}>
+                {move.classification === "Blunder" || move.classification === "Mistake" ? "Show Me" : "Explain"}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );
